@@ -192,6 +192,7 @@ button:disabled {
             <h2 data-i18n="section2"></h2>
             <p data-i18n="section2_desc"></p>
 
+            <!-- Row 1 -->
             <div class="row">
                 <div class="col">
                     <label data-i18n="method"></label>
@@ -201,12 +202,56 @@ button:disabled {
                         <option data-i18n="method_interactive"></option>
                     </select>
                 </div>
+
                 <div class="col">
-                    <label data-i18n="notes"></label>
-                    <textarea id="extraContext" data-i18n-placeholder="notes_ph"></textarea>
+                    <label data-i18n="teacher_age"></label>
+                    <input
+                        type="number"
+                        id="teacherAge"
+                        min="20"
+                        max="70"
+                        placeholder="30"
+                    />
+                    <small data-i18n="teacher_age_hint"></small>
+                </div>
+            </div>
+
+            <!-- Row 2 -->
+            <div class="row">
+                <div class="col">
+                    <label data-i18n="region"></label>
+                    <select id="region">
+                        <option data-i18n="region_north"></option>
+                        <option data-i18n="region_central"></option>
+                        <option data-i18n="region_south"></option>
+                    </select>
+                </div>
+
+                <div class="col">
+                    <label data-i18n="area_type"></label>
+                    <select id="areaType">
+                        <option data-i18n="area_urban"></option>
+                        <option data-i18n="area_rural"></option>
+                        <option data-i18n="area_mountain"></option>
+                        <option data-i18n="area_coastal"></option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Row 3 -->
+            <div class="row">
+                <div class="col">
+                    <label data-i18n="student_context"></label>
+                    <textarea
+                        id="studentContext"
+                        rows="3"
+                        data-i18n-placeholder="student_context_ph"
+                    ></textarea>
+                    <small data-i18n="student_context_hint"></small>
                 </div>
             </div>
         </div>
+
 
         <button id="generate" disabled data-i18n="generate"></button>
         <div id="status"></div>
@@ -236,7 +281,22 @@ const TEXT = {
         notes: "Ghi chú thêm",
         notes_ph: "Ví dụ: lớp học không đồng đều, cần nhiều minh họa...",
         generate: "🚀 Tạo bài giảng bằng AI",
-        status: "Đang tạo bài giảng..."
+        status: "Đang tạo bài giảng...",
+        teacher_age: "Tuổi giáo viên",
+        teacher_age_hint: "Giúp AI điều chỉnh cách diễn đạt và ví dụ phù hợp",
+        region: "Khu vực",
+        region_north: "Miền Bắc",
+        region_central: "Miền Trung",
+        region_south: "Miền Nam",
+        area_type: "Khu vực sinh sống",
+        area_urban: "Thành thị",
+        area_rural: "Nông thôn",
+        area_mountain: "Miền núi",
+        area_coastal: "Ven biển",
+        student_context: "Bối cảnh đời sống học sinh",
+        student_context_ph: "Ví dụ: gia đình làm nông, sống gần chợ, khu công nghiệp...",
+        student_context_hint: "AI sẽ dùng các ví dụ quen thuộc với đời sống học sinh"
+
     },
     EN: {
         title: "AI Lesson Architect",
@@ -257,7 +317,22 @@ const TEXT = {
         notes: "Additional notes",
         notes_ph: "e.g. mixed-ability class, needs more examples...",
         generate: "🚀 Generate lesson with AI",
-        status: "Generating lesson..."
+        status: "Generating lesson...",
+        teacher_age: "Teacher age",
+        teacher_age_hint: "Helps AI adjust tone and examples",
+        region: "Region",
+        region_north: "Northern Vietnam",
+        region_central: "Central Vietnam",
+        region_south: "Southern Vietnam",
+        area_type: "Living area",
+        area_urban: "Urban",
+        area_rural: "Rural",
+        area_mountain: "Mountainous",
+        area_coastal: "Coastal",
+        student_context: "Student life context",
+        student_context_ph: "e.g. farming families, market life, industrial zones...",
+        student_context_hint: "AI will use familiar real-life examples"
+
     }
 };
 

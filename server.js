@@ -66,127 +66,258 @@ async function generateImagenImage(apiKey, prompt) {
 // Serve static files from the 'public' directory
 app.use(express.static('public'));
 
-// --- API: Generate Lesson ---
+// --- API: Generate Lesson ---// --- API: Generate Lesson ---
 app.post('/api/generate', async (req, res) => {
     try {
-        const { apiKey, topic, grade, slideCount, age, region, method, theories, extraContext, language } = req.body;
+        const {
+            apiKey,
+            topic,
+            grade,
+            slideCount,
+            age,
+            region,
+            areaType,
+            method,
+            theories = [],
+            studentContext = "",
+            extraContext = "",
+            language = "VN"
+        } = req.body;
+
+        /* =========================
+           1. VALIDATION & DEFAULTS
+        ========================== */
+        if (!topic || topic.trim().length < 3) {
+            return res.status(400).json({ error: "Invalid topic" });
+        }
+
+        const slides = Math.min(Math.max(Number(slideCount) || 5, 3), 16);
+        const teacherAge = Number(age) || 30;
 
         const keyToUse = apiKey || process.env.GOOGLE_API_KEY;
-        if (!keyToUse) return res.status(400).json({ error: "API Key required" });
+        if (!keyToUse) {
+            return res.status(400).json({ error: "API Key required" });
+        }
 
-        // 1. Generate Text (Gemini)
+        /* =========================
+           2. PEDAGOGICAL ADAPTATION
+        ========================== */
+
+        const tone =
+            teacherAge < 30 ? "friendly, energetic, modern" :
+            teacherAge < 50 ? "clear, structured, supportive" :
+            "calm, formal, methodical";
+
+        const lifeContextMap = {
+            urban: "city life, apartments, traffic, supermarkets, technology",
+            rural: "villages, farming, family businesses, local markets",
+            mountain: "mountain communities, nature, limited infrastructure",
+            coastal: "coastal towns, fishing, tourism, sea-related activities"
+        };
+
+        const localLifeContext =
+            lifeContextMap[areaType] || "daily student life";
+
+        const langRule =
+            language === "VN"
+                ? "ALL text content MUST be in natural, fluent VIETNAMESE."
+                : "ALL text content MUST be in natural, fluent ENGLISH.";
+
+        /* =========================
+           3. GEMINI PROMPT
+        ========================== */
+
         const genAI = new GoogleGenerativeAI(keyToUse);
-        const model = genAI.getGenerativeModel({ 
-            model: "gemini-3-flash-preview", 
-            generationConfig: { responseMimeType: "application/json" }
+        const model = genAI.getGenerativeModel({
+            model: "gemini-3-flash-preview",
+            generationConfig: {
+                responseMimeType: "application/json",
+                temperature: 0.7
+            }
         });
 
-        const langInstruction = language === 'VN' ? "Output strictly in VIETNAMESE." : "Output strictly in ENGLISH.";
         const prompt = `
-        Role: Teacher (Age: ${age}). Tone: ${age < 30 ? "Energetic" : "Formal"}.
-        Language: ${langInstruction}
-        Topic: "${topic}" (Grade: ${grade}).
-        Context: Region: ${region}, Method: ${method}, Theories: ${theories.join(', ')}, Notes: ${extraContext}
-        
-        Output JSON:
-        {
-            "title": "Main Title",
-            "subtitle": "Subtitle",
-            "slides": [
-                {
-                    "title": "Slide Header",
-                    "content": ["Bullet 1", "Bullet 2"],
-                    "speaker_notes": "Script",
-                    "image_prompt": "Detailed ENGLISH description of image."
-                }
-            ]
-        }
-        Generate exactly ${slideCount} slides.
+You are an experienced EDUCATOR designing a real classroom lesson.
+
+STRICT RULES:
+- ${langRule}
+- Adjust language complexity for grade level: ${grade}
+- Teaching tone: ${tone}
+- Teaching method: ${method}
+- Educational theories: ${theories.join(", ") || "Standard pedagogy"}
+- Use examples familiar to students living in: ${localLifeContext}
+- Student life context: ${studentContext || "general students"}
+- Region: ${region}
+
+AVOID:
+- Abstract or foreign examples students cannot relate to
+- Overly academic language
+- Meta commentary about AI
+
+LESSON TOPIC:
+"${topic}"
+
+OUTPUT STRICT JSON ONLY:
+{
+  "title": "Lesson title",
+  "subtitle": "Optional subtitle",
+  "slides": [
+    {
+      "title": "Slide title",
+      "content": [
+        "Bullet point written for students",
+        "Another clear bullet"
+      ],
+      "speaker_notes": "Teacher-facing explanation and tips",
+      "image_prompt": "DETAILED, REALISTIC, ENGLISH-ONLY description of an educational illustration grounded in ${localLifeContext}"
+    }
+  ]
+}
+
+Generate EXACTLY ${slides} slides.
         `;
 
-        console.log("1. Generating Text...");
+        console.log("1. Generating lesson content...");
         const result = await model.generateContent(prompt);
         const lessonData = JSON.parse(cleanJSON(result.response.text()));
 
-        // 2. Generate Images (PARALLEL EXECUTION FOR SPEED)
-        console.log("2. Generating Images (Parallel)...");
-        
-        // A. Start Cover Image Request
-        const coverPromise = generateImagenImage(keyToUse, `Minimal educational cover for ${topic}`);
-        
-        // B. Start All Slide Image Requests simultaneously
-        const slideImagePromises = lessonData.slides.map(s => 
-            generateImagenImage(keyToUse, s.image_prompt)
+        /* =========================
+           4. IMAGE GENERATION (PARALLEL)
+        ========================== */
+
+        console.log("2. Generating images...");
+        const coverPromise = generateImagenImage(
+            keyToUse,
+            `Minimal, modern educational cover illustration for lesson topic: ${topic}`
         );
 
-        // C. Wait for all to finish (This cuts time from 60s -> 10s)
-        const [coverImg, ...slideImages] = await Promise.all([coverPromise, ...slideImagePromises]);
-        console.log("3. Images Received. Building PPT...");
+        const slideImagePromises = lessonData.slides.map(slide =>
+            generateImagenImage(keyToUse, slide.image_prompt)
+        );
 
-        // 3. Build PowerPoint
+        const [coverImg, ...slideImages] = await Promise.all([
+            coverPromise,
+            ...slideImagePromises
+        ]);
+
+        /* =========================
+           5. POWERPOINT BUILD
+        ========================== */
+
+        console.log("3. Building PowerPoint...");
         const pres = new PptxGenJS();
-        pres.layout = 'LAYOUT_WIDE';
-        
+        pres.layout = "LAYOUT_WIDE";
+
         pres.defineSlideMaster({
-            title: 'MASTER',
-            background: { color: 'F4F6F9' },
+            title: "MASTER",
+            background: { color: "F4F6F9" },
             objects: [
-                { rect: { x: 0, y: 0, w: '100%', h: 1.2, fill: '1A73E8' } },
-                { rect: { x: 0, y: 7, w: '100%', h: 0.5, fill: 'FFFFFF' } }
+                { rect: { x: 0, y: 0, w: "100%", h: 1.2, fill: "1A73E8" } }
             ]
         });
 
-        // Title Slide
+        // --- Title Slide ---
         let slide = pres.addSlide();
-        slide.background = { color: 'FFFFFF' };
-        slide.addShape(pres.ShapeType.rect, { x: 0, y: 0, w: '40%', h: '100%', fill: '1A73E8' });
-        slide.addText(lessonData.title, { x: 0.5, y: 2, w: '35%', fontSize: 48, bold: true, color: 'FFFFFF' });
-        slide.addText(lessonData.subtitle || topic, { x: 0.5, y: 4.5, w: '35%', fontSize: 24, color: 'E8F0FE' });
-        
-        if (coverImg) {
-            slide.addImage({ data: coverImg, x: 5.5, y: 1.5, w: 7, h: 4.5, sizing: { type: 'contain', w: 7, h: 4.5 } });
-        }
+        slide.background = { color: "FFFFFF" };
 
-        // Content Slides
-        lessonData.slides.forEach((s, index) => {
-            slide = pres.addSlide({ masterName: 'MASTER' });
-            
-            // Header
-            slide.addText(s.title, { x: 0.5, y: 0.2, w: '90%', fontSize: 32, color: 'FFFFFF', bold: true });
-
-            // Text
-            const contentText = Array.isArray(s.content) ? s.content.join('\n') : s.content;
-            slide.addText(contentText, { 
-                x: 0.5, y: 1.5, w: 6, h: 5, 
-                fontSize: 24, color: '363636', 
-                bullet: { type: 'bullet', code: '2022' },
-                lineSpacing: 35
-            });
-
-            // Retrieve the pre-generated image
-            const imgData = slideImages[index];
-            if (imgData) {
-                slide.addImage({ data: imgData, x: 7, y: 1.5, w: 6, h: 5, sizing: { type: 'contain', w: 6, h: 5 } });
-            } else {
-                slide.addText("(Image Failed)", { x: 7, y: 1.5, w: 6, h: 5, fill: 'EEEEEE', color: '999999', align: 'center' });
-            }
-
-            if (s.speaker_notes) slide.addNotes(s.speaker_notes);
+        slide.addShape(pres.ShapeType.rect, {
+            x: 0,
+            y: 0,
+            w: "38%",
+            h: "100%",
+            fill: "1A73E8"
         });
 
-        // 4. Output
-        const buffer = await pres.write({ outputType: 'nodebuffer' });
-        const base64 = buffer.toString('base64');
-        res.json({ success: true, file: base64, preview: lessonData });
+        slide.addText(lessonData.title, {
+            x: 0.5,
+            y: 2,
+            w: "35%",
+            fontSize: 44,
+            bold: true,
+            color: "FFFFFF"
+        });
 
-    } catch (error) {
-        console.error("Critical Error:", error);
-        res.status(500).json({ error: error.message });
+        slide.addText(lessonData.subtitle || topic, {
+            x: 0.5,
+            y: 4.5,
+            w: "35%",
+            fontSize: 22,
+            color: "E8F0FE"
+        });
+
+        if (coverImg) {
+            slide.addImage({
+                data: coverImg,
+                x: 5.5,
+                y: 1.5,
+                w: 7,
+                h: 4.5,
+                sizing: { type: "contain", w: 7, h: 4.5 }
+            });
+        }
+
+        // --- Content Slides ---
+        lessonData.slides.forEach((s, index) => {
+            slide = pres.addSlide({ masterName: "MASTER" });
+
+            slide.addText(s.title, {
+                x: 0.5,
+                y: 0.2,
+                w: "90%",
+                fontSize: 30,
+                bold: true,
+                color: "FFFFFF"
+            });
+
+            slide.addText(
+                Array.isArray(s.content) ? s.content.join("\n") : s.content,
+                {
+                    x: 0.5,
+                    y: 1.5,
+                    w: 6,
+                    h: 5,
+                    fontSize: 22,
+                    color: "363636",
+                    bullet: { type: "bullet", code: "2022" },
+                    lineSpacing: 32
+                }
+            );
+
+            const img = slideImages[index];
+            if (img) {
+                slide.addImage({
+                    data: img,
+                    x: 7,
+                    y: 1.5,
+                    w: 6,
+                    h: 5,
+                    sizing: { type: "contain", w: 6, h: 5 }
+                });
+            }
+
+            if (s.speaker_notes) {
+                slide.addNotes(s.speaker_notes);
+            }
+        });
+
+        /* =========================
+           6. OUTPUT
+        ========================== */
+
+        const buffer = await pres.write({ outputType: "nodebuffer" });
+
+        res.json({
+            success: true,
+            file: buffer.toString("base64"),
+            preview: lessonData
+        });
+
+    } catch (err) {
+        console.error("Critical Error:", err);
+        res.status(500).json({ error: "Lesson generation failed" });
     }
 });
-app.get('/__health', (req, res) => {
-  res.json({ status: 'ok' });
-});
+
 
 
 app.listen(PORT, '0.0.0.0', () => {
