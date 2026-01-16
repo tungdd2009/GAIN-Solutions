@@ -16,7 +16,8 @@ def generate_image(req: ImageRequest):
         raise HTTPException(status_code=400, detail="Prompt is empty")
 
     try:
-        client = genai.Client(api_key=req.api_key)
+        client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
+
 
         result = client.models.generate_images(
             model="imagen-4.0-generate-001",
