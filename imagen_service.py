@@ -10,6 +10,10 @@ class ImageRequest(BaseModel):
     prompt: str
     aspect_ratio: str = "16:9"
 
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
 @app.post("/generate-image")
 def generate_image(req: ImageRequest):
     if not req.prompt.strip():
