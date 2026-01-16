@@ -63,6 +63,38 @@ async function generateImagenImage(apiKey, prompt) {
     }
 }
 
+async function generateImagenViaPython(prompt) {
+    if (!prompt) return null;
+
+    try {
+        const response = await fetch(
+            `${process.env.IMAGEN_SERVICE_URL}/generate-image`,
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    prompt,
+                    aspect_ratio: "16:9"
+                })
+            }
+        );
+
+        if (!response.ok) {
+            const err = await response.text();
+            console.error("[Imagen Service Error]", err);
+            return null;
+        }
+
+        const data = await response.json();
+        return `data:image/png;base64,${data.image}`;
+
+    } catch (err) {
+        console.error("[Imagen Bridge Fail]", err.message);
+        return null;
+    }
+}
+
+
 // Serve static files from the 'public' directory
 app.use(express.static('public'));
 
@@ -186,13 +218,13 @@ Generate EXACTLY ${slides} slides.
         ========================== */
 
         console.log("2. Generating images...");
-        const coverPromise = generateImagenImage(
+        const coverPromise = generateImagenViaPython(
             keyToUse,
             `Minimal, modern educational cover illustration for lesson topic: ${topic}`
         );
 
         const slideImagePromises = lessonData.slides.map(slide =>
-            generateImagenImage(keyToUse, slide.image_prompt)
+            generateImagenViaPython(keyToUse, slide.image_prompt)
         );
 
         const [coverImg, ...slideImages] = await Promise.all([
