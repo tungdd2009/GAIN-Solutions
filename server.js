@@ -145,7 +145,7 @@ app.post('/api/generate', async (req, res) => {
         ========================== */
         const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
         const model = genAI.getGenerativeModel({
-            model: "gemini-1.5-flash", // FIXED: Valid model name
+            model: "gemini-3-flash-preview", // FIXED: Valid model name
             generationConfig: {
                 responseMimeType: "application/json",
                 temperature: 0.7,
