@@ -145,7 +145,7 @@ app.post('/api/generate', async (req, res) => {
         ========================== */
         const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
         const model = genAI.getGenerativeModel({
-            model: "gemini-3-flash-preview", // FIXED: Valid model name
+            model: "gemini-1.5-flash", // FIXED: Valid model name
             generationConfig: {
                 responseMimeType: "application/json",
                 temperature: 0.7,
@@ -169,6 +169,22 @@ LESSON TOPIC: "${topic}"
 Create EXACTLY ${slides} slides with clear, age-appropriate content.
 Use concrete examples from ${localContext} that students can relate to.
 
+STRICT FORMAT RULES:
+1. Each slide MUST have 3-5 bullet points in the "content" array
+2. Each bullet point should be ONE concise sentence (max 100 characters)
+3. DO NOT put long paragraphs as a single bullet point
+4. Break long ideas into multiple shorter bullets
+
+BAD EXAMPLE (DO NOT DO THIS):
+"content": ["Kết nối cảm xúc: Hiểu về những chủ nhân cũ giúp chúng ta trân trọng và gắn bó hơn với không gian sống hiện tại."]
+
+GOOD EXAMPLE (DO THIS):
+"content": [
+  "Kết nối cảm xúc với không gian sống",
+  "Hiểu về những chủ nhân cũ của ngôi nhà",
+  "Trân trọng và gắn bó với nơi ở hiện tại"
+]
+
 OUTPUT ONLY THIS JSON (no markdown, no extra text):
 {
   "title": "Engaging lesson title in ${language === 'VN' ? 'Vietnamese' : 'English'}",
@@ -177,9 +193,11 @@ OUTPUT ONLY THIS JSON (no markdown, no extra text):
     {
       "title": "Slide title in ${language === 'VN' ? 'Vietnamese' : 'English'}",
       "content": [
-        "Clear bullet point 1",
-        "Clear bullet point 2",
-        "Clear bullet point 3"
+        "Concise bullet 1 (one sentence only)",
+        "Concise bullet 2 (one sentence only)",
+        "Concise bullet 3 (one sentence only)",
+        "Concise bullet 4 (optional)",
+        "Concise bullet 5 (optional)"
       ],
       "speaker_notes": "Teacher guidance and teaching tips in ${language === 'VN' ? 'Vietnamese' : 'English'}",
       "image_prompt": "Detailed ENGLISH description of educational image showing ${localContext} context. Be specific and visual. Example: 'Vietnamese rice farmers working in terraced fields at sunrise, educational illustration'"
@@ -191,6 +209,51 @@ OUTPUT ONLY THIS JSON (no markdown, no extra text):
         const result = await model.generateContent(prompt);
         const responseText = result.response.text();
         const lessonData = JSON.parse(cleanJSON(responseText));
+
+        // VALIDATION: Ensure content is properly formatted
+        if (!lessonData.slides || !Array.isArray(lessonData.slides)) {
+            throw new Error('Invalid lesson data: missing slides array');
+        }
+
+        lessonData.slides = lessonData.slides.map((slide, idx) => {
+            // Ensure content is always an array
+            if (!slide.content) {
+                slide.content = ['Content not generated'];
+            } else if (typeof slide.content === 'string') {
+                // Split long string into sentences
+                slide.content = slide.content
+                    .split(/[.!?]+/)
+                    .map(s => s.trim())
+                    .filter(s => s.length > 0)
+                    .slice(0, 5); // Max 5 bullets
+            } else if (Array.isArray(slide.content)) {
+                // Clean up array items
+                slide.content = slide.content
+                    .filter(item => item && typeof item === 'string')
+                    .map(item => {
+                        const cleaned = item.trim();
+                        // If item is too long (>150 chars), split it
+                        if (cleaned.length > 150) {
+                            const parts = cleaned.split(/[.:;]/).map(p => p.trim()).filter(p => p);
+                            return parts[0]; // Take first part only
+                        }
+                        return cleaned;
+                    })
+                    .filter(item => item.length > 0);
+                
+                // Ensure at least one bullet point
+                if (slide.content.length === 0) {
+                    slide.content = [`Slide ${idx + 1} content`];
+                }
+            }
+
+            // Ensure other required fields
+            slide.title = slide.title || `Slide ${idx + 1}`;
+            slide.speaker_notes = slide.speaker_notes || '';
+            slide.image_prompt = slide.image_prompt || `Educational illustration for ${topic}`;
+
+            return slide;
+        });
 
         console.log(`[1/4] ✓ Generated ${lessonData.slides.length} slides`);
 
@@ -299,8 +362,17 @@ OUTPUT ONLY THIS JSON (no markdown, no extra text):
                 fontFace: "Arial"
             });
 
-            // Content bullets
-            const contentText = Array.isArray(s.content) ? s.content : [s.content];
+            // Content bullets - FIX: Handle both array and string content
+            let contentText;
+            if (Array.isArray(s.content)) {
+                // Filter out empty items and create proper bullet array
+                contentText = s.content
+                    .filter(item => item && item.trim())
+                    .map(item => ({ text: item.trim(), options: { breakLine: true } }));
+            } else {
+                contentText = [{ text: s.content, options: { breakLine: true } }];
+            }
+
             slide.addText(contentText, {
                 x: 0.5,
                 y: 1.3,
