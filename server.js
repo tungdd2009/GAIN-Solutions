@@ -22,8 +22,13 @@ const cleanJSON = (text) => {
 
 // --- HELPER: Generate Image via Python Service ---
 async function generateImage(prompt, retries = 2) {
-    if (!prompt || !process.env.IMAGEN_SERVICE_URL) {
-        console.log('[Image] Skipping - no prompt or service URL');
+    if (!prompt) {
+        console.log('[Image] Skipping - no prompt');
+        return null;
+    }
+    
+    if (!process.env.IMAGEN_SERVICE_URL) {
+        console.log('[Image] Skipping - IMAGEN_SERVICE_URL not configured');
         return null;
     }
     
@@ -40,7 +45,7 @@ async function generateImage(prompt, retries = 2) {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                        prompt: prompt + ", educational illustration, photorealistic, clear, no text overlay",
+                        prompt: prompt + ", educational illustration, photorealistic, clear, professional, no text overlay",
                         aspect_ratio: "16:9"
                     }),
                     signal: controller.signal
@@ -54,26 +59,34 @@ async function generateImage(prompt, retries = 2) {
                 console.error(`[Image Error] ${response.status}: ${errorText}`);
                 if (attempt < retries) {
                     console.log(`[Image] Retrying (${attempt + 1}/${retries})...`);
+                    await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2s before retry
                     continue;
                 }
                 return null;
             }
 
             const data = await response.json();
-            if (data.image) {
-                console.log('[Image] ✓ Generated successfully');
+            if (data.image && data.image.length > 100) { // Basic validation
+                console.log(`[Image] ✓ Success (${(data.image.length / 1024).toFixed(1)}KB)`);
                 return `data:image/png;base64,${data.image}`;
-            }
-            return null;
-
-        } catch (err) {
-            console.error(`[Image Attempt ${attempt + 1}/${retries + 1}]`, err.message);
-            if (attempt === retries) {
-                console.log('[Image] All retries failed, continuing without image');
+            } else {
+                console.error('[Image] Invalid response - image data too short');
                 return null;
             }
-            // Wait before retry
-            await new Promise(resolve => setTimeout(resolve, 1000));
+
+        } catch (err) {
+            if (err.name === 'AbortError') {
+                console.error(`[Image Attempt ${attempt + 1}] Timeout after 45s`);
+            } else {
+                console.error(`[Image Attempt ${attempt + 1}]`, err.message);
+            }
+            
+            if (attempt === retries) {
+                console.log('[Image] All retries exhausted, continuing without image');
+                return null;
+            }
+            
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1s before retry
         }
     }
     return null;
@@ -274,6 +287,15 @@ OUTPUT ONLY THIS JSON (no markdown, no extra text):
 
         const successCount = allImages.filter(img => img !== null).length;
         console.log(`[2/4] ✓ Generated ${successCount}/${allImages.length} images`);
+        
+        // Debug: Log which images failed
+        allImages.forEach((img, idx) => {
+            if (idx === 0) {
+                console.log(`  - Cover image: ${img ? '✓ Success' : '✗ Failed'}`);
+            } else {
+                console.log(`  - Slide ${idx} image: ${img ? '✓ Success' : '✗ Failed'}`);
+            }
+        });
 
         /* =========================
            5. BUILD POWERPOINT
@@ -305,45 +327,118 @@ OUTPUT ONLY THIS JSON (no markdown, no extra text):
         let slide = pres.addSlide();
         slide.background = { color: "FFFFFF" };
 
-        // Left blue panel
+        // Left gradient panel (modern design)
         slide.addShape(pres.ShapeType.rect, {
             x: 0,
             y: 0,
-            w: "38%",
+            w: "42%",
             h: "100%",
-            fill: { type: "solid", color: "1A73E8" }
+            fill: { 
+                type: "solid",
+                color: "1A73E8"
+            }
         });
 
-        // Title
+        // Accent gradient overlay
+        slide.addShape(pres.ShapeType.rect, {
+            x: 0,
+            y: 0,
+            w: "42%",
+            h: "100%",
+            fill: { 
+                type: "solid",
+                color: "000000",
+                transparency: 85
+            }
+        });
+
+        // Title with better positioning
         slide.addText(lessonData.title, {
-            x: 0.5,
-            y: 2,
-            w: "35%",
-            fontSize: 40,
+            x: 0.6,
+            y: 2.2,
+            w: "38%",
+            fontSize: 42,
             bold: true,
             color: "FFFFFF",
-            fontFace: "Arial"
+            fontFace: "Arial",
+            align: "left",
+            valign: "top"
         });
 
-        // Subtitle
+        // Subtitle/description
         slide.addText(lessonData.subtitle || topic, {
-            x: 0.5,
-            y: 4.2,
-            w: "35%",
-            fontSize: 20,
-            color: "E8F0FE",
-            fontFace: "Arial"
+            x: 0.6,
+            y: 4.6,
+            w: "36%",
+            fontSize: 18,
+            color: "E3F2FD",
+            fontFace: "Arial",
+            align: "left"
         });
 
-        // Cover image
-        if (coverImg) {
+        // Grade badge
+        slide.addShape(pres.ShapeType.rect, {
+            x: 0.6,
+            y: 5.8,
+            w: 1.2,
+            h: 0.4,
+            fill: { color: "FFFFFF", transparency: 20 },
+            line: { color: "FFFFFF", width: 1 }
+        });
+        
+        slide.addText(req.body.grade || "K-12", {
+            x: 0.6,
+            y: 5.8,
+            w: 1.2,
+            h: 0.4,
+            fontSize: 14,
+            color: "FFFFFF",
+            bold: true,
+            align: "center",
+            valign: "middle"
+        });
+
+        // Cover image (right side) with frame
+        const hasCoverImg = coverImg && coverImg.startsWith('data:image');
+        
+        if (hasCoverImg) {
+            // White frame
+            slide.addShape(pres.ShapeType.rect, {
+                x: 5.8,
+                y: 1.2,
+                w: 7.2,
+                h: 5,
+                fill: { color: "FFFFFF" },
+                line: { color: "E0E0E0", width: 2 }
+            });
+
             slide.addImage({
                 data: coverImg,
-                x: 5.2,
-                y: 1.5,
-                w: 7.5,
-                h: 4.2,
-                sizing: { type: "contain", w: 7.5, h: 4.2 }
+                x: 6,
+                y: 1.4,
+                w: 6.8,
+                h: 4.6,
+                sizing: { type: "cover", w: 6.8, h: 4.6 }
+            });
+        } else {
+            // Placeholder when no image
+            slide.addShape(pres.ShapeType.rect, {
+                x: 5.8,
+                y: 1.2,
+                w: 7.2,
+                h: 5,
+                fill: { color: "F5F5F5" },
+                line: { color: "E0E0E0", width: 2 }
+            });
+
+            slide.addText("🎓", {
+                x: 5.8,
+                y: 2.5,
+                w: 7.2,
+                h: 2,
+                fontSize: 80,
+                align: "center",
+                valign: "middle"
             });
         }
 
