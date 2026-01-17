@@ -15,6 +15,8 @@
     --border: #dde3ea;
     --text: #202124;
     --muted: #5f6368;
+    --error: #ea4335;
+    --success: #34a853;
 }
 
 * { box-sizing: border-box; }
@@ -26,10 +28,6 @@ body {
     padding: 24px;
     display: flex;
     justify-content: center;
-}
-.app-logo {
-  height: 64px;   /* try 48–64px */
-  width: auto;
 }
 
 .app {
@@ -65,11 +63,23 @@ body {
     padding: 6px;
 }
 
+.brand h1 {
+    margin: 0;
+    font-size: 24px;
+}
+
+.brand p {
+    margin: 4px 0 0 0;
+    font-size: 14px;
+    opacity: 0.9;
+}
+
 .lang-toggle select {
     padding: 6px 10px;
     border-radius: 8px;
     border: none;
     font-weight: 600;
+    cursor: pointer;
 }
 
 /* CONTENT */
@@ -87,6 +97,10 @@ body {
     border-color: var(--secondary);
 }
 
+.section h2 {
+    margin-top: 0;
+}
+
 .row {
     display: flex;
     gap: 20px;
@@ -100,6 +114,7 @@ label {
     font-weight: 600;
     margin-bottom: 6px;
     display: block;
+    color: var(--text);
 }
 
 input, select, textarea {
@@ -108,9 +123,20 @@ input, select, textarea {
     border-radius: 10px;
     border: 1px solid var(--border);
     background: #fbfcff;
+    font-family: inherit;
+    font-size: 14px;
 }
 
-small { color: var(--muted); }
+input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
+}
+
+small { 
+    color: var(--muted);
+    font-size: 12px;
+}
 
 button {
     width: 100%;
@@ -122,10 +148,22 @@ button {
     border: none;
     border-radius: 12px;
     cursor: pointer;
+    transition: transform 0.2s, opacity 0.2s;
+}
+
+button:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(26, 115, 232, 0.3);
+}
+
+button:active:not(:disabled) {
+    transform: translateY(0);
 }
 
 button:disabled {
     background: #c7c7c7;
+    cursor: not-allowed;
+    opacity: 0.6;
 }
 
 #status {
@@ -135,6 +173,34 @@ button:disabled {
     border-radius: 14px;
     background: #f1f8ff;
     border: 1px solid #d2e3fc;
+}
+
+#status.error {
+    background: #fce8e6;
+    border-color: #f5c6cb;
+    color: var(--error);
+}
+
+#status.success {
+    background: #e6f4ea;
+    border-color: #c3e6cb;
+    color: var(--success);
+}
+
+.spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(26, 115, 232, 0.3);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-right: 8px;
+    vertical-align: middle;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
 }
 </style>
 </head>
@@ -146,7 +212,7 @@ button:disabled {
     <!-- HEADER -->
     <div class="app-header">
         <div class="brand">
-            <img src="logo.png" alt="Logo">
+            <img src="logo.png" alt="Logo" onerror="this.style.display='none'">
             <div>
                 <h1 data-i18n="title"></h1>
                 <p data-i18n="subtitle"></p>
@@ -155,8 +221,8 @@ button:disabled {
 
         <div class="lang-toggle">
             <select id="langSelect">
-                <option value="VN">VN</option>
-                <option value="EN">EN</option>
+                <option value="VN">🇻🇳 VN</option>
+                <option value="EN">🇬🇧 EN</option>
             </select>
         </div>
     </div>
@@ -178,7 +244,7 @@ button:disabled {
                     <select id="grade">
                         <option>K-5</option>
                         <option>6-8</option>
-                        <option>9-12</option>
+                        <option selected>9-12</option>
                         <option>University</option>
                     </select>
                 </div>
@@ -201,9 +267,9 @@ button:disabled {
                 <div class="col">
                     <label data-i18n="method"></label>
                     <select id="method">
-                        <option data-i18n="method_traditional"></option>
-                        <option data-i18n="method_steam"></option>
-                        <option data-i18n="method_interactive"></option>
+                        <option value="traditional" data-i18n="method_traditional"></option>
+                        <option value="steam" data-i18n="method_steam"></option>
+                        <option value="interactive" data-i18n="method_interactive"></option>
                     </select>
                 </div>
 
@@ -214,6 +280,7 @@ button:disabled {
                         id="teacherAge"
                         min="20"
                         max="70"
+                        value="30"
                         placeholder="30"
                     />
                     <small data-i18n="teacher_age_hint"></small>
@@ -225,19 +292,19 @@ button:disabled {
                 <div class="col">
                     <label data-i18n="region"></label>
                     <select id="region">
-                        <option data-i18n="region_north"></option>
-                        <option data-i18n="region_central"></option>
-                        <option data-i18n="region_south"></option>
+                        <option value="north" data-i18n="region_north"></option>
+                        <option value="central" data-i18n="region_central"></option>
+                        <option value="south" data-i18n="region_south"></option>
                     </select>
                 </div>
 
                 <div class="col">
                     <label data-i18n="area_type"></label>
                     <select id="areaType">
-                        <option data-i18n="area_urban"></option>
-                        <option data-i18n="area_rural"></option>
-                        <option data-i18n="area_mountain"></option>
-                        <option data-i18n="area_coastal"></option>
+                        <option value="urban" data-i18n="area_urban"></option>
+                        <option value="rural" data-i18n="area_rural"></option>
+                        <option value="mountain" data-i18n="area_mountain"></option>
+                        <option value="coastal" data-i18n="area_coastal"></option>
                     </select>
                 </div>
             </div>
@@ -282,8 +349,6 @@ const TEXT = {
         method_traditional: "Giảng dạy truyền thống",
         method_steam: "STEAM / Dạy học dự án",
         method_interactive: "Tương tác – hoạt động",
-        notes: "Ghi chú thêm",
-        notes_ph: "Ví dụ: lớp học không đồng đều, cần nhiều minh họa...",
         generate: "🚀 Tạo bài giảng bằng AI",
         status: "Đang tạo bài giảng...",
         teacher_age: "Tuổi giáo viên",
@@ -299,8 +364,10 @@ const TEXT = {
         area_coastal: "Ven biển",
         student_context: "Bối cảnh đời sống học sinh",
         student_context_ph: "Ví dụ: gia đình làm nông, sống gần chợ, khu công nghiệp...",
-        student_context_hint: "AI sẽ dùng các ví dụ quen thuộc với đời sống học sinh"
-
+        student_context_hint: "AI sẽ dùng các ví dụ quen thuộc với đời sống học sinh",
+        error: "Lỗi: ",
+        success: "✅ Bài giảng đã được tạo thành công!",
+        downloading: "Đang tải xuống..."
     },
     EN: {
         title: "AI Lesson Architect",
@@ -318,8 +385,6 @@ const TEXT = {
         method_traditional: "Traditional lecture",
         method_steam: "STEAM / Project-based",
         method_interactive: "Interactive learning",
-        notes: "Additional notes",
-        notes_ph: "e.g. mixed-ability class, needs more examples...",
         generate: "🚀 Generate lesson with AI",
         status: "Generating lesson...",
         teacher_age: "Teacher age",
@@ -335,8 +400,10 @@ const TEXT = {
         area_coastal: "Coastal",
         student_context: "Student life context",
         student_context_ph: "e.g. farming families, market life, industrial zones...",
-        student_context_hint: "AI will use familiar real-life examples"
-
+        student_context_hint: "AI will use familiar real-life examples",
+        error: "Error: ",
+        success: "✅ Lesson generated successfully!",
+        downloading: "Downloading..."
     }
 };
 
@@ -365,6 +432,42 @@ function applyLang(lang) {
     });
 }
 
+function showStatus(message, type = 'info') {
+    status.style.display = "block";
+    status.className = type;
+    
+    if (type === 'loading') {
+        status.innerHTML = `<span class="spinner"></span>${message}`;
+        status.className = '';
+    } else {
+        status.textContent = message;
+    }
+}
+
+function hideStatus() {
+    status.style.display = "none";
+}
+
+function downloadPPTX(base64Data, filename) {
+    const binary = atob(base64Data);
+    const array = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+        array[i] = binary.charCodeAt(i);
+    }
+    const blob = new Blob([array], { 
+        type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' 
+    });
+    
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
 /* === EVENTS === */
 slide.oninput = () => slideValue.textContent = slide.value;
 topic.oninput = () => btn.disabled = !topic.value.trim();
@@ -372,11 +475,63 @@ topic.oninput = () => btn.disabled = !topic.value.trim();
 langSelect.onchange = () => applyLang(langSelect.value);
 
 btn.onclick = async () => {
-    btn.disabled = true;
-    status.style.display = "block";
-    status.textContent = TEXT[currentLang].status;
+    const topicValue = topic.value.trim();
+    
+    if (!topicValue) {
+        showStatus(TEXT[currentLang].error + "Please enter a topic", 'error');
+        return;
+    }
 
-    // backend call stays unchanged
+    btn.disabled = true;
+    showStatus(TEXT[currentLang].status, 'loading');
+
+    try {
+        const payload = {
+            topic: topicValue,
+            grade: document.getElementById("grade").value,
+            slideCount: parseInt(slide.value),
+            teacherAge: parseInt(document.getElementById("teacherAge").value) || 30,
+            region: document.getElementById("region").value,
+            areaType: document.getElementById("areaType").value,
+            method: document.getElementById("method").value,
+            studentContext: document.getElementById("studentContext").value.trim(),
+            language: currentLang
+        };
+
+        const response = await fetch('/api/generate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Failed to generate lesson');
+        }
+
+        if (data.success && data.file) {
+            showStatus(TEXT[currentLang].success, 'success');
+            
+            // Download the file
+            const filename = `${topicValue.replace(/[^a-z0-9]/gi, '_')}_lesson.pptx`;
+            downloadPPTX(data.file, filename);
+            
+            setTimeout(() => {
+                hideStatus();
+                btn.disabled = false;
+            }, 3000);
+        } else {
+            throw new Error('Invalid response from server');
+        }
+
+    } catch (error) {
+        console.error('Generation error:', error);
+        showStatus(TEXT[currentLang].error + error.message, 'error');
+        btn.disabled = false;
+    }
 };
 
 /* === INIT === */
