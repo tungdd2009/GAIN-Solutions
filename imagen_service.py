@@ -53,13 +53,13 @@ def generate_image(req: ImageRequest):
         result = client.models.generate_content(
             model="imagen-4.0-generate-001",
             contents=req.prompt,
-            config={
-                'number_of_images':1,
-                'aspect_ratio':req.aspect_ratio,
-                'safety_filter_level':"block_most",
-                'person_generation':"allow_adult",
-                'negative_prompt':"text overlay, words, letters, watermark, blurry, low quality"
-            }
+        #    config={
+        #        'number_of_images':1,
+        #        'aspect_ratio':req.aspect_ratio,
+        #        'safety_filter_level':"block_most",
+        #        'person_generation':"allow_adult",
+        #        'negative_prompt':"text overlay, words, letters, watermark, blurry, low quality"
+        #    }
         )
 
         # Extract image
