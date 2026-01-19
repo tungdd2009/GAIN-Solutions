@@ -54,11 +54,13 @@ def generate_image(req: ImageRequest):
             model="imagen-4.0-generate-001",
             contents=req.prompt,
             config=types.GenerateContentConfig(
-                number_of_images=1,
-                aspect_ratio=req.aspect_ratio,
-                safety_filter_level="block_most",
-                person_generation="allow_adult",
-                negative_prompt="text overlay, words, letters, watermark, blurry, low quality"
+                image_config=types.ImageConfig(
+                    number_of_images=1,
+                    aspect_ratio=req.aspect_ratio,
+                    safety_filter_level="block_most",
+                    person_generation="allow_adult",
+                    negative_prompt="text overlay, words, letters, watermark, blurry, low quality"
+                )
             )
         )
 
