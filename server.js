@@ -158,7 +158,7 @@ app.post('/api/generate', async (req, res) => {
         ========================== */
         const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
         const model = genAI.getGenerativeModel({
-            model: "gemini-3-flash-preview", // FIXED: Valid model name
+            model: "gemini-1.5-flash", // FIXED: Valid model name
             generationConfig: {
                 responseMimeType: "application/json",
                 temperature: 0.7,
@@ -448,53 +448,54 @@ OUTPUT ONLY THIS JSON (no markdown, no extra text):
 
             // Slide title
             slide.addText(s.title, {
-                x: 0.5,
-                y: 0.15,
-                w: "90%",
-                fontSize: 28,
+                x: 0.4,
+                y: 0.2,
+                w: 12,
+                fontSize: 32,
                 bold: true,
                 color: "FFFFFF",
-                fontFace: "Arial"
-            });
-
-            // Content bullets - FIX: Handle both array and string content
-            let contentText;
-            if (Array.isArray(s.content)) {
-                // Filter out empty items and create proper bullet array
-                contentText = s.content
-                    .filter(item => item && item.trim())
-                    .map(item => ({ text: item.trim(), options: { breakLine: true } }));
-            } else {
-                contentText = [{ text: s.content, options: { breakLine: true } }];
-            }
-
-            slide.addText(contentText, {
-                x: 0.5,
-                y: 1.3,
-                w: 5.8,
-                h: 5,
-                fontSize: 20,
-                color: "2C3E50",
-                bullet: { type: "bullet", code: "2022" },
-                lineSpacing: 28,
                 fontFace: "Arial",
-                valign: "top"
+                align: "left"
             });
 
-            // Slide image
             const img = slideImages[index];
-            if (img) {
+            const hasImage = img && img.startsWith('data:image');
+
+            if (hasImage) {
+                // With image: side-by-side layout
+                slide.addText(s.content.map(c => ({ text: c, options: { bullet: true } })), {
+                    x: 0.4,
+                    y: 1.4,
+                    w: 5.5,
+                    h: 4.8,
+                    fontSize: 20,
+                    color: "2C3E50",
+                    fontFace: "Arial",
+                    valign: "top"
+                });
+
                 slide.addImage({
                     data: img,
-                    x: 6.8,
-                    y: 1.3,
-                    w: 6,
-                    h: 5,
-                    sizing: { type: "contain", w: 6, h: 5 }
+                    x: 6.5,
+                    y: 1.4,
+                    w: 6.2,
+                    h: 4.8,
+                    sizing: { type: "contain" }
+                });
+            } else {
+                // Without image: full width
+                slide.addText(s.content.map(c => ({ text: c, options: { bullet: true } })), {
+                    x: 0.8,
+                    y: 1.4,
+                    w: 11.5,
+                    h: 4.8,
+                    fontSize: 22,
+                    color: "2C3E50",
+                    fontFace: "Arial",
+                    valign: "top"
                 });
             }
 
-            // Speaker notes
             if (s.speaker_notes) {
                 slide.addNotes(s.speaker_notes);
             }
