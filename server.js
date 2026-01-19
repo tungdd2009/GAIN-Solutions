@@ -20,6 +20,30 @@ const cleanJSON = (text) => {
     return text.replace(/```json/g, '').replace(/```/g, '').trim();
 };
 
+// --- HELPER: Wake up Imagen service (Render cold start) ---
+async function wakeUpImagenService() {
+    if (!process.env.IMAGEN_SERVICE_URL) return false;
+    
+    try {
+        console.log('[Image] Waking up service...');
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 60000); // 60s for cold start
+        
+        const response = await fetch(
+            `${process.env.IMAGEN_SERVICE_URL}/health`,
+            { signal: controller.signal }
+        );
+        
+        clearTimeout(timeout);
+        const data = await response.json();
+        console.log('[Image] Service ready:', data);
+        return response.ok;
+    } catch (err) {
+        console.error('[Image] Service wake-up failed:', err.message);
+        return false;
+    }
+}
+
 // --- HELPER: Generate Image via Python Service ---
 async function generateImage(prompt, retries = 2) {
     if (!prompt) {
@@ -37,7 +61,9 @@ async function generateImage(prompt, retries = 2) {
     for (let attempt = 0; attempt <= retries; attempt++) {
         try {
             const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), 45000); // 45s timeout
+            // Longer timeout for first attempt (cold start), shorter for retries
+            const timeoutDuration = attempt === 0 ? 90000 : 45000;
+            const timeout = setTimeout(() => controller.abort(), timeoutDuration);
 
             const response = await fetch(
                 `${process.env.IMAGEN_SERVICE_URL}/generate-image`,
@@ -59,14 +85,14 @@ async function generateImage(prompt, retries = 2) {
                 console.error(`[Image Error] ${response.status}: ${errorText}`);
                 if (attempt < retries) {
                     console.log(`[Image] Retrying (${attempt + 1}/${retries})...`);
-                    await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2s before retry
+                    await new Promise(resolve => setTimeout(resolve, 3000));
                     continue;
                 }
                 return null;
             }
 
             const data = await response.json();
-            if (data.image && data.image.length > 100) { // Basic validation
+            if (data.image && data.image.length > 100) {
                 console.log(`[Image] ✓ Success (${(data.image.length / 1024).toFixed(1)}KB)`);
                 return `data:image/png;base64,${data.image}`;
             } else {
@@ -76,7 +102,7 @@ async function generateImage(prompt, retries = 2) {
 
         } catch (err) {
             if (err.name === 'AbortError') {
-                console.error(`[Image Attempt ${attempt + 1}] Timeout after 45s`);
+                console.error(`[Image Attempt ${attempt + 1}] Timeout`);
             } else {
                 console.error(`[Image Attempt ${attempt + 1}]`, err.message);
             }
@@ -86,7 +112,7 @@ async function generateImage(prompt, retries = 2) {
                 return null;
             }
             
-            await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1s before retry
+            await new Promise(resolve => setTimeout(resolve, 2000));
         }
     }
     return null;
@@ -158,7 +184,7 @@ app.post('/api/generate', async (req, res) => {
         ========================== */
         const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
         const model = genAI.getGenerativeModel({
-            model: "gemini-1.5-flash", // FIXED: Valid model name
+            model: "gemini-3-flash-preview", // FIXED: Valid model name or gemini-3-pro-preview
             generationConfig: {
                 responseMimeType: "application/json",
                 temperature: 0.7,
@@ -273,7 +299,10 @@ OUTPUT ONLY THIS JSON (no markdown, no extra text):
         /* =========================
            4. GENERATE IMAGES (PARALLEL)
         ========================== */
-        console.log('[2/4] Generating images in parallel...');
+        console.log('[2/4] Waking up image service and generating images...');
+        
+        // Wake up service first (important for Render cold starts)
+        await wakeUpImagenService();
         
         const coverPrompt = `Modern educational cover illustration for ${topic}, ${localContext}, professional, clean design, 16:9`;
         
