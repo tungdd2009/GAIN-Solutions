@@ -67,8 +67,7 @@ def generate_image(req: ImageRequest):
         config = types.GenerateContentConfig(
             # aspect_ratio MUST be inside image_config
             image_config=types.ImageConfig(
-                aspect_ratio=req.aspect_ratio,   # Sets the output shape
-                image_size="1K"         # Standard resolution (1024px equivalent)
+                aspect_ratio=req.aspect_ratio
             ),
             candidate_count=1,         # Your original 'number_of_images'
             person_generation="ALLOW_ADULT",
