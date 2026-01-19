@@ -28,7 +28,7 @@ def generate_image(req: ImageRequest):
     """
     Generate educational image using Imagen 4.0
     
-    FIXED: Properly extract image bytes using PIL
+    FIXED: Properly extract image bytes - handles multiple SDK versions
     """
     
     # Validation
@@ -49,7 +49,7 @@ def generate_image(req: ImageRequest):
         # Initialize client
         client = genai.Client(api_key=api_key)
 
-        # Generate image with proper config
+        # Generate image
         result = client.models.generate_images(
             model="imagen-4.0-generate-001",
             prompt=req.prompt,
@@ -71,30 +71,45 @@ def generate_image(req: ImageRequest):
             )
 
         generated_image = result.generated_images[0]
+        print(f"[Debug] Generated image type: {type(generated_image)}")
+        print(f"[Debug] Image object type: {type(generated_image.image)}")
+        print(f"[Debug] Image attributes: {dir(generated_image.image)}")
         
-        # CRITICAL FIX: Use the correct attribute to access image
-        # The Image object has a _pil_image property that contains the PIL Image
-        if hasattr(generated_image.image, '_pil_image'):
-            pil_image = generated_image.image._pil_image
-        elif hasattr(generated_image.image, 'image_bytes'):
-            # Fallback: if image_bytes exists, use it directly
+        # Try multiple methods to extract image bytes
+        image_bytes = None
+        
+        # Method 1: Direct image_bytes attribute
+        if hasattr(generated_image.image, 'image_bytes'):
             image_bytes = generated_image.image.image_bytes
-            base64_img = base64.b64encode(image_bytes).decode("utf-8")
-            print(f"[Imagen] ✓ Success via image_bytes ({len(image_bytes)} bytes)")
-            return {"image": base64_img}
-        else:
-            # Alternative: Try to get the PIL image directly
-            pil_image = generated_image.image
+            print(f"[Imagen] ✓ Method 1: image_bytes ({len(image_bytes)} bytes)")
         
-        # Convert PIL Image to bytes
-        img_byte_arr = io.BytesIO()
-        pil_image.save(img_byte_arr, format='PNG', optimize=True, quality=95)
-        image_bytes = img_byte_arr.getvalue()
+        # Method 2: PIL Image object
+        elif hasattr(generated_image.image, '_pil_image'):
+            pil_image = generated_image.image._pil_image
+            img_byte_arr = io.BytesIO()
+            pil_image.save(img_byte_arr, format='PNG', optimize=True, quality=95)
+            image_bytes = img_byte_arr.getvalue()
+            print(f"[Imagen] ✓ Method 2: _pil_image ({len(image_bytes)} bytes)")
+        
+        # Method 3: Try to treat as PIL Image directly
+        else:
+            try:
+                img_byte_arr = io.BytesIO()
+                generated_image.image.save(img_byte_arr, format='PNG', optimize=True, quality=95)
+                image_bytes = img_byte_arr.getvalue()
+                print(f"[Imagen] ✓ Method 3: direct PIL save ({len(image_bytes)} bytes)")
+            except Exception as e:
+                print(f"[Imagen] Method 3 failed: {e}")
+        
+        if not image_bytes:
+            raise HTTPException(
+                status_code=500,
+                detail="Could not extract image bytes from API response"
+            )
         
         # Encode to base64
         base64_img = base64.b64encode(image_bytes).decode("utf-8")
-
-        print(f"[Imagen] ✓ Success ({len(image_bytes)} bytes = {len(image_bytes)/1024:.1f}KB)")
+        print(f"[Imagen] ✓ Final size: {len(image_bytes)/1024:.1f}KB (base64: {len(base64_img)/1024:.1f}KB)")
 
         return {"image": base64_img}
 
