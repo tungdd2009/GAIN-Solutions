@@ -61,19 +61,31 @@ def generate_image(req: ImageRequest):
         #        'negative_prompt':"text overlay, words, letters, watermark, blurry, low quality"
         #    }
         #)
+    # Updated for 2026 SDK standards
+    
+        # Configuration for Nano Banana
+        config = types.GenerateContentConfig(
+            # aspect_ratio MUST be inside image_config
+            image_config=types.ImageConfig(
+                aspect_ratio=req.aspect_ratio,   # Sets the output shape
+                image_size="1K"         # Standard resolution (1024px equivalent)
+            ),
+            candidate_count=1,         # Your original 'number_of_images'
+            person_generation="ALLOW_ADULT",
+            negative_prompt="text overlay, words, letters, watermark, blurry, low quality",
+            safety_settings=[
+                types.SafetySetting(
+                    category="HARM_CATEGORY_HATE_SPEECH",
+                    threshold="BLOCK_LOW_AND_ABOVE" # Original: 'block_most'
+                )
+            ]
+        )
+
+
         result = client.models.generate_content(
             model='gemini-2.5-flash-image',
             contents=req.prompt,
-            config=types.GenerateContentConfig(
-                response_modalities=["IMAGE"],
-                image_config=types.ImageConfig(
-                    number_of_images=1,
-                    aspect_ratio=req.aspect_ratio,
-                    safety_filter_level="block_most",
-                    person_generation="allow_adult",
-                    negative_prompt="text overlay, words, letters, watermark, blurry, low quality"
-                ),
-            ),
+            config=config
         )
         # Extract image
         if not result.generated_images or len(result.generated_images) == 0:
