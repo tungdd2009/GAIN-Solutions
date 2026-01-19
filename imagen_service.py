@@ -65,6 +65,7 @@ def generate_image(req: ImageRequest):
     
         # Configuration for Nano Banana
         config = types.GenerateContentConfig(
+            response_modalities=["IMAGE"],
             # aspect_ratio MUST be inside image_config
            # image_config=types.ImageConfig(
            #     aspect_ratio=req.aspect_ratio
@@ -84,7 +85,7 @@ def generate_image(req: ImageRequest):
         # Updated extraction logic for Gemini 2.5
         try:
             result = client.models.generate_content(
-                model="gemini-2.5-flash",
+                model="gemini-2.5-flash-image",
                 contents=req.prompt,
                 config=config
             )
