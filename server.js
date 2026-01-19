@@ -22,12 +22,15 @@ const cleanJSON = (text) => {
 
 // --- HELPER: Wake up Imagen service (Render cold start) ---
 async function wakeUpImagenService() {
-    if (!process.env.IMAGEN_SERVICE_URL) return false;
+    if (!process.env.IMAGEN_SERVICE_URL) {
+        console.log('[Image] ⚠ IMAGEN_SERVICE_URL not set');
+        return false;
+    }
     
     try {
-        console.log('[Image] Waking up service...');
+        console.log(`[Image] Pinging: ${process.env.IMAGEN_SERVICE_URL}/health`);
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 60000); // 60s for cold start
+        const timeout = setTimeout(() => controller.abort(), 60000);
         
         const response = await fetch(
             `${process.env.IMAGEN_SERVICE_URL}/health`,
@@ -36,10 +39,10 @@ async function wakeUpImagenService() {
         
         clearTimeout(timeout);
         const data = await response.json();
-        console.log('[Image] Service ready:', data);
-        return response.ok;
+        console.log('[Image] Health check:', JSON.stringify(data));
+        return response.ok && data.api_key_set;
     } catch (err) {
-        console.error('[Image] Service wake-up failed:', err.message);
+        console.error('[Image] ⚠ Health check failed:', err.message);
         return false;
     }
 }
@@ -184,7 +187,7 @@ app.post('/api/generate', async (req, res) => {
         ========================== */
         const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
         const model = genAI.getGenerativeModel({
-            model: "gemini-3-flash-preview", // FIXED: Valid model name or gemini-3-pro-preview
+            model: "gemini-3-flash-preview", // FIXED: Valid model name # gemini-3-pro-preview
             generationConfig: {
                 responseMimeType: "application/json",
                 temperature: 0.7,
