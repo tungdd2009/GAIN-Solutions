@@ -70,7 +70,7 @@ def generate_image(req: ImageRequest):
                 aspect_ratio=req.aspect_ratio
             ),
             candidate_count=1,         # Your original 'number_of_images'
-            person_generation="ALLOW_ADULT",
+            #person_generation="ALLOW_ADULT",
             negative_prompt="text overlay, words, letters, watermark, blurry, low quality",
             safety_settings=[
                 types.SafetySetting(
