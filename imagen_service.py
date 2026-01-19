@@ -66,9 +66,9 @@ def generate_image(req: ImageRequest):
         # Configuration for Nano Banana
         config = types.GenerateContentConfig(
             # aspect_ratio MUST be inside image_config
-            image_config=types.ImageConfig(
-                aspect_ratio=req.aspect_ratio
-            ),
+           # image_config=types.ImageConfig(
+           #     aspect_ratio=req.aspect_ratio
+           # ),
             candidate_count=1,         # Your original 'number_of_images'
             #person_generation="ALLOW_ADULT",
             #negative_prompt="text overlay, words, letters, watermark, blurry, low quality",
