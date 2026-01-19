@@ -71,7 +71,7 @@ def generate_image(req: ImageRequest):
             ),
             candidate_count=1,         # Your original 'number_of_images'
             #person_generation="ALLOW_ADULT",
-            negative_prompt="text overlay, words, letters, watermark, blurry, low quality",
+            #negative_prompt="text overlay, words, letters, watermark, blurry, low quality",
             safety_settings=[
                 types.SafetySetting(
                     category="HARM_CATEGORY_HATE_SPEECH",
