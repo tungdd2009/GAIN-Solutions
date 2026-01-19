@@ -50,9 +50,9 @@ def generate_image(req: ImageRequest):
         client = genai.Client(api_key=api_key)
 
         # Generate image
-        result = client.models.generate_images(
+        result = client.models.generate_content(
             model="imagen-4.0-generate-001",
-            prompt=req.prompt,
+            contents=req.prompt,
             config=types.GenerateImagesConfig(
                 number_of_images=1,
                 aspect_ratio=req.aspect_ratio,
