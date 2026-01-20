@@ -216,8 +216,8 @@ def generate_image(req: ImageRequest):
         print(f"[Imagen] ✓ Final size: {len(image_bytes)/1024:.1f}KB (base64: {len(base64_img)/1024:.1f}KB)")
 
         return {"image": base64_img}
-'''
         '''
+'''
         
     except HTTPException:
         raise    
