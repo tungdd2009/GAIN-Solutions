@@ -36,6 +36,20 @@ def health():
     }
 
 @app.post("/generate-image")
+def generate_image(client, prompt):
+    try:
+        response = client.models.generate_images(
+            model='imagen-4.0-generate-001', 
+            prompt=prompt + " , educational style, high resolution, photorealistic",
+            config=types.GenerateImagesConfig(number_of_images=1, aspect_ratio="16:9")
+        )
+        if response.generated_images:
+            raw_bytes = response.generated_images[0].image.image_bytes
+            return io.BytesIO(raw_bytes), None
+        return None, "No data"
+    except Exception as e:
+        return None, str(e)
+'''
 def generate_image(req: ImageRequest):
     """
     Generate educational image using Imagen 4.0
@@ -160,6 +174,7 @@ def generate_image(req: ImageRequest):
             raise HTTPException(status_code=500, detail="Image generation failed")
 
         '''
+'''
         generated_image = result.generated_images[0]
         print(f"[Debug] Generated image type: {type(generated_image)}")
         print(f"[Debug] Image object type: {type(generated_image.image)}")
@@ -201,6 +216,7 @@ def generate_image(req: ImageRequest):
         print(f"[Imagen] ✓ Final size: {len(image_bytes)/1024:.1f}KB (base64: {len(base64_img)/1024:.1f}KB)")
 
         return {"image": base64_img}
+'''
         '''
         
     except HTTPException:
@@ -216,7 +232,7 @@ def generate_image(req: ImageRequest):
             detail=f"Image generation failed: {error_msg}"
         )
 
-
+'''
 if __name__ == "__main__":
     import uvicorn
     print("\n" + "="*50)
