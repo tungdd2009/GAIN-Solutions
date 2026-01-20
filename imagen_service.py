@@ -103,12 +103,16 @@ def generate_image(req: ImageRequest):
 
             # Access the first image's bytes
             image_bytes = image_parts[0].inline_data.data
+            # Encode to base64
+            base64_img = base64.b64encode(image_bytes).decode("utf-8")
+            print(f"[Imagen] ✓ Final size: {len(image_bytes)/1024:.1f}KB (base64: {len(base64_img)/1024:.1f}KB)")
 
+            return {"image": base64_img}
         except Exception as e:
             print(f"[API ERROR] {str(e)}")
             raise HTTPException(status_code=500, detail="Image generation failed")
 
-
+'''
         generated_image = result.generated_images[0]
         print(f"[Debug] Generated image type: {type(generated_image)}")
         print(f"[Debug] Image object type: {type(generated_image.image)}")
@@ -151,21 +155,22 @@ def generate_image(req: ImageRequest):
         print(f"[Imagen] ✓ Final size: {len(image_bytes)/1024:.1f}KB (base64: {len(base64_img)/1024:.1f}KB)")
 
         return {"image": base64_img}
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        error_msg = str(e)
-        print(f"[Imagen ERROR] {error_msg}")
-        import traceback
-        traceback.print_exc()
         
-        raise HTTPException(
-            status_code=500, 
-            detail=f"Image generation failed: {error_msg}"
-        )
 
+        except HTTPException:
+            raise
+        except Exception as e:
+            error_msg = str(e)
+            print(f"[Imagen ERROR] {error_msg}")
+            import traceback
+            traceback.print_exc()
+            
+            raise HTTPException(
+                status_code=500, 
+                detail=f"Image generation failed: {error_msg}"
+            )
 
+'''
 if __name__ == "__main__":
     import uvicorn
     print("\n" + "="*50)
