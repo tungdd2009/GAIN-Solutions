@@ -102,10 +102,33 @@ def generate_image(req: ImageRequest):
                 raise HTTPException(status_code=500, detail="No images generated")
 
             # Access the first image's bytes
-            image_bytes = image_parts[0].inline_data.data
-            # Encode to base64
-            base64_img = base64.b64encode(image_bytes).decode("utf-8")
-            print(f"[Imagen] ✓ Final size: {len(image_bytes)/1024:.1f}KB (base64: {len(base64_img)/1024:.1f}KB)")
+            # Access the first image's data
+            inline_data = image_parts[0].inline_data
+
+            # Check if data is already base64 string or raw bytes
+            if isinstance(inline_data.data, str):
+                # Already base64 - use directly
+                image_bytes = base64.b64decode(inline_data.data)
+                base64_img = inline_data.data
+            elif isinstance(inline_data.data, bytes):
+                # Raw bytes - encode to base64
+                image_bytes = inline_data.data
+                base64_img = base64.b64encode(image_bytes).decode("utf-8")
+            else:
+                raise HTTPException(status_code=500, detail=f"Unknown data type: {type(inline_data.data)}")
+
+            # Convert to PNG for PowerPoint compatibility
+            pil_image = PILImage.open(io.BytesIO(image_bytes))
+            if pil_image.mode not in ('RGB', 'RGBA'):
+                pil_image = pil_image.convert('RGB')
+
+            png_buffer = io.BytesIO()
+            pil_image.save(png_buffer, format='PNG')
+            png_bytes = png_buffer.getvalue()
+
+            # Final base64
+            base64_img = base64.b64encode(png_bytes).decode("utf-8")
+            print(f"[Imagen] ✓ PNG: {len(png_bytes)/1024:.1f}KB (base64: {len(base64_img)/1024:.1f}KB)")
 
             return {"image": base64_img}
             
