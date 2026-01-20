@@ -103,7 +103,7 @@ def generate_image(req: ImageRequest):
 
             # Access the first image's bytes
             # Access the first image's data
-            # Access the first image's data
+           # Access the first image's data
             inline_data = image_parts[0].inline_data
 
             # Check if data is already base64 string or raw bytes
