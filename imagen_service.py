@@ -7,6 +7,18 @@ import os
 import io
 from PIL import Image as PILImage
 
+from fastapi.responses import JSONResponse
+from fastapi.requests import Request
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    print("[UNHANDLED ERROR]", repr(exc))
+    return JSONResponse(
+        status_code=500,
+        content={"error": "Internal image generation failure"}
+    )
+
+
 app = FastAPI()
 
 class ImageRequest(BaseModel):
@@ -125,6 +137,15 @@ def generate_image(req: ImageRequest):
                 raise HTTPException(status_code=500, detail=f"Unsupported: {type(raw_data)}")
 
             print(f"[INFO] Got {len(image_bytes)} bytes")
+            # After image_bytes is extracted
+            if not (
+                image_bytes.startswith(b"\x89PNG") or
+                image_bytes.startswith(b"\xff\xd8\xff")
+            ):
+                raise HTTPException(
+                    status_code=500,
+                    detail="Returned data is not a valid PNG or JPEG"
+                )
 
             # Encode and return - NO PIL PROCESSING
             base64_img = base64.b64encode(image_bytes).decode("utf-8")
