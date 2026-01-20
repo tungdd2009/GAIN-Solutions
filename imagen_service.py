@@ -37,25 +37,6 @@ def health():
 
 @app.post("/generate-image")
 def generate_image(req: ImageRequest):
-    api_key = os.getenv("GOOGLE_API_KEY")
-    client = genai.Client(api_key=api_key)
-    try:
-        response = client.models.generate_images(
-            model='imagen-4.0-generate-001', 
-            prompt=req.prompt + " , educational style, high resolution, photorealistic",
-            config=types.GenerateImagesConfig(number_of_images=1, aspect_ratio="16:9")
-        )
-        if response.generated_images:
-            image_bytes = response.generated_images[0].image.image_bytes
-            base64_img = base64.b64encode(image_bytes).decode("utf-8")
-            print(f"[Imagen] ✓ Returning {len(base64_img)} base64 chars")
-
-            return {"image": base64_img}
-        return None, "No data"
-    except Exception as e:
-        return None, str(e)
-'''
-def generate_image(req: ImageRequest):
     """
     Generate educational image using Imagen 4.0
     
@@ -237,7 +218,7 @@ def generate_image(req: ImageRequest):
             detail=f"Image generation failed: {error_msg}"
         )
 
-'''
+
 if __name__ == "__main__":
     import uvicorn
     print("\n" + "="*50)
