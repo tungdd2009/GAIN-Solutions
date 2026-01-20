@@ -10,6 +10,8 @@ from PIL import Image as PILImage
 from fastapi.responses import JSONResponse
 from fastapi.requests import Request
 
+
+app = FastAPI()
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     print("[UNHANDLED ERROR]", repr(exc))
@@ -18,8 +20,6 @@ async def global_exception_handler(request: Request, exc: Exception):
         content={"error": "Internal image generation failure"}
     )
 
-
-app = FastAPI()
 
 class ImageRequest(BaseModel):
     prompt: str
