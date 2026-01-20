@@ -97,7 +97,7 @@ async function generateImage(prompt, retries = 2) {
             const data = await response.json();
             if (data.image && data.image.length > 100) {
                 console.log(`[Image] ✓ Success (${(data.image.length / 1024).toFixed(1)}KB)`);
-                return `data:image/png;base64,${data.image}`;
+                return data.image;
             } else {
                 console.error('[Image] Invalid response - image data too short');
                 return null;
