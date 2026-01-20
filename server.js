@@ -505,9 +505,9 @@ OUTPUT ONLY THIS JSON (no markdown, no extra text):
                     fontFace: "Arial",
                     valign: "top"
                 });
-
+                const base64data = img.split(",")[1];
                 slide.addImage({
-                    data: img,
+                    data: base64data,
                     x: 6.5,
                     y: 1.4,
                     w: 6.2,
