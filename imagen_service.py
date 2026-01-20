@@ -105,60 +105,30 @@ def generate_image(req: ImageRequest):
             # Access the first image's data
            # Access the first image's data
             # Access the first image's data
+            # Access the first image's data
             inline_data = image_parts[0].inline_data
-
-            print(f"[DEBUG] inline_data type: {type(inline_data)}")
-            print(f"[DEBUG] inline_data.data type: {type(inline_data.data)}")
-            print(f"[DEBUG] Has attributes: {dir(inline_data.data)[:10]}")
-
-            # Handle different data types
             raw_data = inline_data.data
 
-            # If it's already a BytesIO object
-            if isinstance(raw_data, io.BytesIO):
-                print("[INFO] Data is BytesIO object")
-                raw_data.seek(0)
-                image_bytes = raw_data.read()
-                
-            # If it's bytes
-            elif isinstance(raw_data, bytes):
-                print("[INFO] Data is bytes")
+            print(f"[DEBUG] Data type: {type(raw_data)}")
+
+            # Extract bytes without BytesIO
+            if isinstance(raw_data, bytes):
                 image_bytes = raw_data
-                
-            # If it's a string (base64)
             elif isinstance(raw_data, str):
-                print("[INFO] Data is string (base64)")
                 image_bytes = base64.b64decode(raw_data)
-                
-            # If it has a read() method (file-like)
             elif hasattr(raw_data, 'read'):
-                print("[INFO] Data is file-like object")
-                raw_data.seek(0) if hasattr(raw_data, 'seek') else None
+                # File-like object - read directly
+                if hasattr(raw_data, 'seek'):
+                    raw_data.seek(0)
                 image_bytes = raw_data.read()
-                
             else:
-                print(f"[ERROR] Unknown type: {type(raw_data)}")
-                print(f"[ERROR] Attributes: {dir(raw_data)}")
-                raise HTTPException(status_code=500, detail=f"Unsupported data type: {type(raw_data)}")
+                raise HTTPException(status_code=500, detail=f"Unsupported: {type(raw_data)}")
 
-            print(f"[INFO] Extracted {len(image_bytes)} bytes")
+            print(f"[INFO] Got {len(image_bytes)} bytes")
 
-            # Now convert to PNG
-            img_buffer = io.BytesIO(image_bytes)
-            img_buffer.seek(0)
-
-            pil_image = PILImage.open(img_buffer)
-            print(f"[SUCCESS] Image: {pil_image.format}, {pil_image.size}, {pil_image.mode}")
-
-            if pil_image.mode not in ('RGB', 'RGBA'):
-                pil_image = pil_image.convert('RGB')
-
-            png_buffer = io.BytesIO()
-            pil_image.save(png_buffer, format='PNG')
-            png_bytes = png_buffer.getvalue()
-
-            base64_img = base64.b64encode(png_bytes).decode("utf-8")
-            print(f"[Imagen] ✓ PNG: {len(png_bytes)/1024:.1f}KB")
+            # Encode and return - NO PIL PROCESSING
+            base64_img = base64.b64encode(image_bytes).decode("utf-8")
+            print(f"[Imagen] ✓ Returning {len(base64_img)} base64 chars")
 
             return {"image": base64_img}
             
