@@ -330,203 +330,125 @@ OUTPUT ONLY THIS JSON (no markdown, no extra text):
         });
 
         /* =========================
-           5. BUILD POWERPOINT
+        5. BUILD POWERPOINT (MODERN DESIGN)
         ========================== */
         console.log('[3/4] Building PowerPoint...');
         const pres = new PptxGenJS();
         pres.layout = "LAYOUT_WIDE";
-        pres.author = "AI Lesson Architect";
-        pres.subject = topic;
 
-        // Define slide master
-        pres.defineSlideMaster({
-            title: "MASTER",
-            background: { color: "F4F6F9" },
-            objects: [
-                { 
-                    rect: { 
-                        x: 0, 
-                        y: 0, 
-                        w: "100%", 
-                        h: 1.0, 
-                        fill: { type: "solid", color: "1A73E8" }
-                    } 
-                }
-            ]
-        });
+        // --- THEME COLORS ---
+        const COLORS = {
+            primary: "1E293B",   // Slate 800
+            accent: "6366F1",    // Indigo 500
+            text: "334155",      // Slate 700
+            light: "F8FAFC",     // Slate 50
+            white: "FFFFFF"
+        };
 
-        // --- Title Slide ---
+        // --- TITLE SLIDE (Cinematic Look) ---
         let slide = pres.addSlide();
-        slide.background = { color: "FFFFFF" };
 
-        // Left gradient panel (modern design)
-        slide.addShape(pres.ShapeType.rect, {
-            x: 0,
-            y: 0,
-            w: "42%",
-            h: "100%",
-            fill: { 
-                type: "solid",
-                color: "1A73E8"
-            }
-        });
-
-        // Accent gradient overlay
-        slide.addShape(pres.ShapeType.rect, {
-            x: 0,
-            y: 0,
-            w: "42%",
-            h: "100%",
-            fill: { 
-                type: "solid",
-                color: "000000",
-                transparency: 85
-            }
-        });
-
-        // Title with better positioning
-        slide.addText(lessonData.title, {
-            x: 0.6,
-            y: 2.2,
-            w: "38%",
-            fontSize: 42,
-            bold: true,
-            color: "FFFFFF",
-            fontFace: "Arial",
-            align: "left",
-            valign: "top"
-        });
-
-        // Subtitle/description
-        slide.addText(lessonData.subtitle || topic, {
-            x: 0.6,
-            y: 4.6,
-            w: "36%",
-            fontSize: 18,
-            color: "E3F2FD",
-            fontFace: "Arial",
-            align: "left"
-        });
-
-        // Grade badge
-        slide.addShape(pres.ShapeType.rect, {
-            x: 0.6,
-            y: 5.8,
-            w: 1.2,
-            h: 0.4,
-            fill: { color: "FFFFFF", transparency: 20 },
-            line: { color: "FFFFFF", width: 1 }
-        });
-        
-        slide.addText(req.body.grade || "K-12", {
-            x: 0.6,
-            y: 5.8,
-            w: 1.2,
-            h: 0.4,
-            fontSize: 14,
-            color: "FFFFFF",
-            bold: true,
-            align: "center",
-            valign: "middle"
-        });
-
-        // Cover image (right side) with frame
-        const hasCoverImg = coverImg && coverImg.startsWith('data:image');
-        
-        if (hasCoverImg) {
-            // White frame
-            slide.addShape(pres.ShapeType.rect, {
-                x: 5.8,
-                y: 1.2,
-                w: 7.2,
-                h: 5,
-                fill: { color: "FFFFFF" },
-                line: { color: "E0E0E0", width: 2 }
-            });
-
+        // 1. Background Image/Color
+        if (coverImg && coverImg.startsWith('data:image')) {
+            const base64data = coverImg.split(",")[1];
             slide.addImage({
-                data: coverImg,
-                x: 6,
-                y: 1.4,
-                w: 6.8,
-                h: 4.6,
-                sizing: { type: "cover", w: 6.8, h: 4.6 }
+                data: base64data,
+                x: 0, y: 0, w: "100%", h: "100%",
+                sizing: { type: "cover" }
+            });
+            // Dark Overlay for readability
+            slide.addShape(pres.ShapeType.rect, {
+                x: 0, y: 0, w: "100%", h: "100%",
+                fill: { color: "000000", transparency: 50 }
             });
         } else {
-            // Placeholder when no image
-            slide.addShape(pres.ShapeType.rect, {
-                x: 5.8,
-                y: 1.2,
-                w: 7.2,
-                h: 5,
-                fill: { color: "F5F5F5" },
-                line: { color: "E0E0E0", width: 2 }
-            });
-
-            slide.addText("🎓", {
-                x: 5.8,
-                y: 2.5,
-                w: 7.2,
-                h: 2,
-                fontSize: 80,
-                align: "center",
-                valign: "middle"
-            });
+            slide.background = { color: COLORS.primary };
         }
 
-        // --- Content Slides ---
-        lessonData.slides.forEach((s, index) => {
-            slide = pres.addSlide({ masterName: "MASTER" });
+        // 2. Decorative Accent Line
+        slide.addShape(pres.ShapeType.rect, {
+            x: 0.5, y: 2.5, w: 1.5, h: 0.1, fill: { color: COLORS.accent }
+        });
 
-            // Slide title
+        // 3. Title Text (High Contrast)
+        slide.addText(lessonData.title, {
+            x: 0.5, y: 3.0, w: "90%",
+            fontSize: 54, bold: true, color: COLORS.white,
+            fontFace: "Arial"
+        });
+
+        // 4. Subtitle
+        slide.addText(lessonData.subtitle || topic, {
+            x: 0.5, y: 4.5, w: "90%",
+            fontSize: 24, color: COLORS.white, transparency: 20,
+            fontFace: "Arial"
+        });
+
+        // 5. Grade Badge (Bottom Left)
+        slide.addText(req.body.grade || "K-12", {
+            x: 0.5, y: 6.2, w: 1.5, h: 0.5,
+            align: "center", valign: "middle",
+            fontSize: 16, bold: true, color: COLORS.white,
+            fill: { color: COLORS.accent }
+        });
+
+
+        // --- CONTENT SLIDES (Split-Layout Design) ---
+        lessonData.slides.forEach((s, index) => {
+            slide = pres.addSlide();
+            slide.background = { color: COLORS.light };
+
+            // 1. Top Accent Bar
+            slide.addShape(pres.ShapeType.rect, {
+                x: 0, y: 0, w: "100%", h: 0.15, fill: { color: COLORS.accent }
+            });
+
+            // 2. Slide Title
             slide.addText(s.title, {
-                x: 0.4,
-                y: 0.2,
-                w: 12,
-                fontSize: 32,
-                bold: true,
-                color: "FFFFFF",
-                fontFace: "Arial",
-                align: "left"
+                x: 0.5, y: 0.5, w: "90%",
+                fontSize: 36, bold: true, color: COLORS.primary,
+                fontFace: "Arial"
             });
 
             const img = slideImages[index];
             const hasImage = img && img.startsWith('data:image');
 
             if (hasImage) {
-                // With image: side-by-side layout
-                slide.addText(s.content.map(c => ({ text: c, options: { bullet: true } })), {
-                    x: 0.4,
-                    y: 1.4,
-                    w: 5.5,
-                    h: 4.8,
-                    fontSize: 20,
-                    color: "2C3E50",
-                    fontFace: "Arial",
-                    valign: "top"
-                });
+                // LAYOUT A: Split Screen (Image Left, Text Right)
                 const base64data = img.split(",")[1];
+                
+                // Image with subtle shadow/border effect
                 slide.addImage({
                     data: base64data,
-                    x: 6.5,
-                    y: 1.4,
-                    w: 6.2,
-                    h: 4.8,
-                    sizing: { type: "contain" }
+                    x: 0.5, y: 1.5, w: 5.0, h: 4.0,
+                    sizing: { type: "cover" }
+                });
+
+                // Text Block in a "Card"
+                slide.addText(s.content.map(c => ({ text: c, options: { bullet: true } })), {
+                    x: 6.0, y: 1.5, w: 5.5, h: 4.0,
+                    fontSize: 22, color: COLORS.text,
+                    valign: "top", lineSpacing: 34
                 });
             } else {
-                // Without image: full width
+                // LAYOUT B: Centered Card (For slides without images)
+                slide.addShape(pres.ShapeType.rect, {
+                    x: 0.5, y: 1.2, w: 12, h: 4.5,
+                    fill: { color: COLORS.white },
+                    rectRadius: 0.2
+                });
+
                 slide.addText(s.content.map(c => ({ text: c, options: { bullet: true } })), {
-                    x: 0.8,
-                    y: 1.4,
-                    w: 11.5,
-                    h: 4.8,
-                    fontSize: 22,
-                    color: "2C3E50",
-                    fontFace: "Arial",
-                    valign: "top"
+                    x: 1.0, y: 1.5, w: 11, h: 4.0,
+                    fontSize: 26, color: COLORS.text,
+                    valign: "top", lineSpacing: 40
                 });
             }
+
+            // 3. Footer (Page number/Branding)
+            slide.addText(`AI Lesson Architect | Slide ${index + 1}`, {
+                x: 0.5, y: 7.0, w: 12, fontSize: 10, color: COLORS.text, transparency: 50
+            });
 
             if (s.speaker_notes) {
                 slide.addNotes(s.speaker_notes);
